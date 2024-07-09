@@ -1,62 +1,23 @@
-// Copyright 2024 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:generative_ai_flutter/stream_chat_screen.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
-/// The API key to use when accessing the Gemini API.
-///
-/// To learn how to generate and specify this key,
-/// check out the README file of this sample.
 const String _apiKey = String.fromEnvironment('API_KEY');
 
-void main() {
-  runApp(const GenerativeAISample());
-}
-
-class GenerativeAISample extends StatelessWidget {
-  const GenerativeAISample({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter + Generative AI',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          brightness: Brightness.dark,
-          seedColor: const Color.fromARGB(255, 171, 222, 244),
-        ),
-        useMaterial3: true,
-      ),
-      home: const StreamChatScreen(title: 'Flutter + Generative AI'),
-    );
-  }
-}
-
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.title});
+class StreamChatScreen extends StatefulWidget {
+  const StreamChatScreen({super.key, required this.title});
 
   final String title;
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  State<StreamChatScreen> createState() => _StreamChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _StreamChatScreenState extends State<StreamChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,14 +42,29 @@ class ChatWidget extends StatefulWidget {
 }
 
 class _ChatWidgetState extends State<ChatWidget> {
-  late final GenerativeModel _model;
-  late final ChatSession _chat;
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
+
+  late final GenerativeModel _model;
+  late final ChatSession _chat;
+
   final FocusNode _textFieldFocus = FocusNode();
+
   final List<({Image? image, String? text, bool fromUser})> _generatedContent =
       <({Image? image, String? text, bool fromUser})>[];
+
   bool _loading = false;
+
+  bool get loading => _loading;
+
+  set loading(bool value) {
+    if (_loading != value && mounted) {
+      _loading = value;
+      setState(() {});
+    }
+  }
+
+  StreamSubscription? _subscription;
 
   @override
   void initState() {
@@ -96,6 +72,12 @@ class _ChatWidgetState extends State<ChatWidget> {
     _model = GenerativeModel(
       model: 'gemini-1.5-flash-latest',
       apiKey: widget.apiKey,
+      safetySettings: [
+        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.none),
+        SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.none),
+        SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.none),
+        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
+      ]
     );
     _chat = _model.startChat();
   }
@@ -182,21 +164,21 @@ class _ChatWidgetState extends State<ChatWidget> {
                 ),
                 const SizedBox.square(dimension: 15),
                 IconButton(
-                  onPressed: !_loading
+                  onPressed: !loading
                       ? () async {
                           _sendImagePrompt(_textController.text);
                         }
                       : null,
                   icon: Icon(
                     Icons.image,
-                    color: _loading
+                    color: loading
                         ? Theme.of(context).colorScheme.secondary
                         : Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                if (!_loading)
+                if (!loading)
                   IconButton(
-                    onPressed: () async {
+                    onPressed: () {
                       _sendChatMessage(_textController.text);
                     },
                     icon: Icon(
@@ -205,7 +187,16 @@ class _ChatWidgetState extends State<ChatWidget> {
                     ),
                   )
                 else
-                  const CircularProgressIndicator(),
+                  IconButton(
+                    onPressed: () {
+                      _stopGenerated();
+                      loading = false;
+                    },
+                    icon: Icon(
+                      Icons.stop_circle_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  )
               ],
             ),
           ),
@@ -215,92 +206,89 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   Future<void> _sendImagePrompt(String message) async {
-    setState(() {
-      _loading = true;
-    });
-    try {
-      ByteData catBytes = await rootBundle.load('assets/images/cat.jpg');
-      ByteData sconeBytes = await rootBundle.load('assets/images/scones.jpg');
-      final content = [
-        Content.multi([
-          TextPart(message),
-          // The only accepted mime types are image/*.
-          DataPart('image/jpeg', catBytes.buffer.asUint8List()),
-          DataPart('image/jpeg', sconeBytes.buffer.asUint8List()),
-        ])
-      ];
-      _generatedContent.add((
-        image: Image.asset("assets/images/cat.jpg"),
-        text: message,
-        fromUser: true
-      ));
-      _generatedContent.add((
-        image: Image.asset("assets/images/scones.jpg"),
-        text: null,
-        fromUser: true
-      ));
+    loading = true;
 
-      var response = await _model.generateContent(content);
-      var text = response.text;
-      _generatedContent.add((image: null, text: text, fromUser: false));
+    ByteData catBytes = await rootBundle.load('assets/images/cat.jpg');
+    ByteData sconeBytes = await rootBundle.load('assets/images/scones.jpg');
+    final content = [
+      Content.multi([
+        TextPart(message),
+        // The only accepted mime types are image/*.
+        DataPart('image/jpeg', catBytes.buffer.asUint8List()),
+        DataPart('image/jpeg', sconeBytes.buffer.asUint8List()),
+      ])
+    ];
+    _generatedContent.add((
+      image: Image.asset("assets/images/cat.jpg"),
+      text: message,
+      fromUser: true
+    ));
+    _generatedContent.add((
+      image: Image.asset("assets/images/scones.jpg"),
+      text: null,
+      fromUser: true
+    ));
 
-      if (text == null) {
-        _showError('No response from API.');
-        return;
-      } else {
-        setState(() {
-          _loading = false;
-          _scrollDown();
-        });
-      }
-    } catch (e) {
-      _showError(e.toString());
-      setState(() {
-        _loading = false;
-      });
-    } finally {
-      _textController.clear();
-      setState(() {
-        _loading = false;
-      });
-      _textFieldFocus.requestFocus();
-    }
+    final stream = _model.generateContentStream(content);
+    _updateFromStream(stream);
   }
 
-  Future<void> _sendChatMessage(String message) async {
-    setState(() {
-      _loading = true;
-    });
+  void _sendChatMessage(String message) {
+    loading = true;
 
-    try {
-      _generatedContent.add((image: null, text: message, fromUser: true));
-      final response = await _chat.sendMessage(
-        Content.text(message),
-      );
-      final text = response.text;
-      _generatedContent.add((image: null, text: text, fromUser: false));
+    _textController.clear();
+    _generatedContent.add((image: null, text: message, fromUser: true));
 
-      if (text == null) {
-        _showError('No response from API.');
-        return;
-      } else {
-        setState(() {
-          _loading = false;
-          _scrollDown();
-        });
-      }
-    } catch (e) {
-      _showError(e.toString());
+    final stream = _chat.sendMessageStream(
+      Content.text(message),
+    );
+
+    _updateFromStream(stream);
+  }
+
+  Future<void> _updateFromStream(
+    Stream<GenerateContentResponse> contentStream,
+  ) async {
+    _generatedContent.add((image: null, text: "", fromUser: false));
+    setState(() {});
+
+    updateGenerateText(String text) {
+      final last = _generatedContent.removeLast();
+      _generatedContent.add((
+        image: null,
+        text: "${last.text}$text",
+        fromUser: false,
+      ));
       setState(() {
-        _loading = false;
+        _scrollDown();
       });
-    } finally {
-      _textController.clear();
-      setState(() {
-        _loading = false;
-      });
-      _textFieldFocus.requestFocus();
     }
+
+    await _stopGenerated();
+    _subscription = contentStream.listen(
+      (event) {
+        final text = event.text ?? "";
+        updateGenerateText(text);
+      },
+      onError: (e, s) {
+        print(e);
+        print(s);
+        _showError(e.toString());
+        loading = false;
+      },
+      onDone: () {
+        print("_updateFromStream onDone");
+        _textController.clear();
+        loading = false;
+        _textFieldFocus.requestFocus();
+      },
+    );
+  }
+
+  Future<void> _stopGenerated() async {
+    print("_stopGenerated called");
+    await _subscription?.cancel();
+    _subscription = null;
   }
 
   void _showError(String message) {
@@ -345,23 +333,27 @@ class MessageWidget extends StatelessWidget {
           isFromUser ? MainAxisAlignment.end : MainAxisAlignment.start,
       children: [
         Flexible(
-            child: Container(
-                constraints: const BoxConstraints(maxWidth: 520),
-                decoration: BoxDecoration(
-                  color: isFromUser
-                      ? Theme.of(context).colorScheme.primaryContainer
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 15,
-                  horizontal: 20,
-                ),
-                margin: const EdgeInsets.only(bottom: 8),
-                child: Column(children: [
-                  if (text case final text?) MarkdownBody(data: text),
-                  if (image case final image?) image,
-                ]))),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 520),
+            decoration: BoxDecoration(
+              color: isFromUser
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            padding: const EdgeInsets.symmetric(
+              vertical: 15,
+              horizontal: 20,
+            ),
+            margin: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              children: [
+                if (text case final text?) MarkdownBody(data: text),
+                if (image case final image?) image,
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

@@ -104,7 +104,11 @@ final class ChatSession {
             safetySettings: _safetySettings,
             generationConfig: _generationConfig);
         final content = <Content>[];
+        var cannceled = false;
+        controller.onCancel = () => cannceled = true;
         await for (final response in responses) {
+          if(cannceled) break;
+
           if (response.candidates case [final candidate, ...]) {
             content.add(candidate.content);
           }
