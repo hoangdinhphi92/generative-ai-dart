@@ -684,6 +684,13 @@ PromptFeedback _parsePromptFeedback(Object jsonObject) {
             _ => null,
           },
           safetyRatings.map(_parseSafetyRating).toList()),
+    {
+      'blockReason': final String blockReason
+    } =>
+        PromptFeedback(
+            BlockReason._parseValue(blockReason),
+            null,
+            List.empty()),
     _ => throw FormatException('Unhandled PromptFeedback format', jsonObject),
   };
 }
