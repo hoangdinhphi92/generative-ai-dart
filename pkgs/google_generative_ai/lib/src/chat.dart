@@ -70,8 +70,10 @@ final class ChatSession {
           safetySettings: _safetySettings, generationConfig: _generationConfig);
       if (response.candidates case [final candidate, ...]) {
         _history.add(message);
-        // TODO: Append role?
-        _history.add(candidate.content);
+        final normalizedContent = candidate.content.role == null
+            ? Content('model', candidate.content.parts)
+            : candidate.content;
+        _history.add(normalizedContent);
       }
       return response;
     } finally {
@@ -141,10 +143,7 @@ final class ChatSession {
     final parts = <Part>[];
     void addBufferedText() {
       if (textBuffer.isEmpty) return;
-      // TODO: When updating min SDK remove workaround.
-      // if (previousText case final singleText?) {
-      final singleText = previousText;
-      if (singleText != null) {
+      if (previousText case final singleText?) {
         parts.add(singleText);
         previousText = null;
       } else {

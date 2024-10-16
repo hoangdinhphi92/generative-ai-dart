@@ -12,35 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:google_generative_ai/google_generative_ai.dart';
 
-Future<void> generate(GenerationConfig? generationConfig, String apiKey) async {
-  final model = GenerativeModel(
-      model: 'gemini-1.5-flash-latest',
-      apiKey: apiKey,
-      generationConfig: generationConfig);
-  final prompt = 'One, two, three, ';
-  print('Prompt: $prompt');
-  final content = [Content.text(prompt)];
-
-  print('Options: ${jsonEncode(generationConfig?.toJson())}');
-
-  final response = await model.generateContent(content);
-  print('Response:');
-  print(response.text);
-}
-
-Future<void> main() async {
+final apiKey = () {
   final apiKey = Platform.environment['GEMINI_API_KEY'];
   if (apiKey == null) {
     stderr.writeln(r'No $GEMINI_API_KEY environment variable');
     exit(1);
   }
-  await generate(null, apiKey);
-  await generate(GenerationConfig(maxOutputTokens: 3), apiKey);
-  await generate(GenerationConfig(stopSequences: ['seven']), apiKey);
-  await generate(GenerationConfig(temperature: 0), apiKey);
+  return apiKey;
+}();
+
+Future<void> configureModelParameters() async {
+  // [START configure_model_parameters]
+  final model = GenerativeModel(
+    model: 'gemini-1.5-flash',
+    apiKey: apiKey,
+  );
+  final prompt = 'Tell me a story about a magic backpack.';
+
+  final response = await model.generateContent(
+    [Content.text(prompt)],
+    generationConfig: GenerationConfig(
+      candidateCount: 1,
+      stopSequences: ['x'],
+      maxOutputTokens: 20,
+      temperature: 1.0,
+    ),
+  );
+  print(response.text);
+  // [END configure_model_parameters]
+}
+
+void main() async {
+  await configureModelParameters();
 }

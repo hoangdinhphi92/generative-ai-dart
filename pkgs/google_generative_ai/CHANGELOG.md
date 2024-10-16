@@ -1,3 +1,19 @@
+## 0.4.6
+
+- Throw a more relevant exception for server error HTTP responses.
+
+## 0.4.5
+
+- Add support for model side Code Execution. Enable code execution by
+  configuring `Tools` with a `codeExecution` argument.
+- Use a default role `'model'` when a chat response comes back with no role.
+
+## 0.4.4
+
+- Allow the Vertex format for citation metadata - read either `citationSources`
+  or `citations` keys, whichever exists. Fixes a `FormatException` when parsing
+  vertex results with citations.
+
 ## 0.4.3
 
 - Internal changes to enable reuse in the Vertex SDK. No user visible changes.

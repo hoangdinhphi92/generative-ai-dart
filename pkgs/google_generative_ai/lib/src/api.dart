@@ -271,7 +271,7 @@ enum BlockReason {
         'BLOCK_REASON_UNSPECIFIED' => BlockReason.unspecified,
         'SAFETY' => BlockReason.safety,
         'OTHER' => BlockReason.other,
-        _ => throw FormatException('Unhandled BlockReason format', jsonObject),
+        _ => throw unhandledFormat('BlockReason', jsonObject),
       };
 
   @override
@@ -308,7 +308,7 @@ enum HarmCategory {
         'HARM_CATEGORY_HATE_SPEECH' => hateSpeech,
         'HARM_CATEGORY_SEXUALLY_EXPLICIT' => sexuallyExplicit,
         'HARM_CATEGORY_DANGEROUS_CONTENT' => dangerousContent,
-        _ => throw FormatException('Unhandled HarmCategory format', jsonObject),
+        _ => throw unhandledFormat('HarmCategory', jsonObject),
       };
 
   String toJson() => switch (this) {
@@ -346,8 +346,7 @@ enum HarmProbability {
         'LOW' => HarmProbability.low,
         'MEDIUM' => HarmProbability.medium,
         'HIGH' => HarmProbability.high,
-        _ =>
-          throw FormatException('Unhandled HarmProbability format', jsonObject),
+        _ => throw unhandledFormat('HarmProbability', jsonObject),
       };
 }
 
@@ -409,7 +408,7 @@ enum FinishReason {
         'SAFETY' => FinishReason.safety,
         'RECITATION' => FinishReason.recitation,
         'OTHER' => FinishReason.other,
-        _ => throw FormatException('Unhandled FinishReason format', jsonObject),
+        _ => throw unhandledFormat('FinishReason', jsonObject),
       };
 
   @override
@@ -612,7 +611,7 @@ CountTokensResponse parseCountTokensResponse(Object jsonObject) {
     return CountTokensResponse._(totalTokens,
         extraFields.isEmpty ? null : Map.unmodifiable(extraFields));
   }
-  throw FormatException('Unhandled CountTokensResponse format', jsonObject);
+  throw unhandledFormat('CountTokensResponse', jsonObject);
 }
 
 EmbedContentResponse parseEmbedContentResponse(Object jsonObject) {
@@ -620,8 +619,7 @@ EmbedContentResponse parseEmbedContentResponse(Object jsonObject) {
     {'embedding': final Object embedding} =>
       EmbedContentResponse(_parseContentEmbedding(embedding)),
     {'error': final Object error} => throw parseError(error),
-    _ =>
-      throw FormatException('Unhandled EmbedContentResponse format', jsonObject)
+    _ => throw unhandledFormat('EmbedContentResponse', jsonObject)
   };
 }
 
@@ -631,14 +629,13 @@ BatchEmbedContentsResponse parseBatchEmbedContentsResponse(Object jsonObject) {
       BatchEmbedContentsResponse(
           embeddings.map(_parseContentEmbedding).toList()),
     {'error': final Object error} => throw parseError(error),
-    _ =>
-      throw FormatException('Unhandled EmbedContentResponse format', jsonObject)
+    _ => throw unhandledFormat('EmbedContentResponse', jsonObject)
   };
 }
 
 Candidate _parseCandidate(Object? jsonObject) {
   if (jsonObject is! Map) {
-    throw FormatException('Unhandled Candidate format', jsonObject);
+    throw unhandledFormat('Candidate', jsonObject);
   }
 
   return Candidate(
@@ -691,13 +688,13 @@ PromptFeedback _parsePromptFeedback(Object jsonObject) {
             BlockReason._parseValue(blockReason),
             null,
             List.empty()),
-    _ => throw FormatException('Unhandled PromptFeedback format', jsonObject),
+    _ => throw unhandledFormat('PromptFeedback', jsonObject),
   };
 }
 
 UsageMetadata _parseUsageMetadata(Object jsonObject) {
   if (jsonObject is! Map<String, Object?>) {
-    throw FormatException('Unhandled UsageMetadata format', jsonObject);
+    throw unhandledFormat('UsageMetadata', jsonObject);
   }
   final promptTokenCount = switch (jsonObject) {
     {'promptTokenCount': final int promptTokenCount} => promptTokenCount,
@@ -726,7 +723,7 @@ SafetyRating _parseSafetyRating(Object? jsonObject) {
     } =>
       SafetyRating(HarmCategory._parseValue(category),
           HarmProbability._parseValue(probability)),
-    _ => throw FormatException('Unhandled SafetyRating format', jsonObject),
+    _ => throw unhandledFormat('SafetyRating', jsonObject),
   };
 }
 
@@ -735,7 +732,7 @@ ContentEmbedding _parseContentEmbedding(Object? jsonObject) {
     {'values': final List<Object?> values} => ContentEmbedding(<double>[
         ...values.cast<double>(),
       ]),
-    _ => throw FormatException('Unhandled ContentEmbedding format', jsonObject),
+    _ => throw unhandledFormat('ContentEmbedding', jsonObject),
   };
 }
 
@@ -743,13 +740,16 @@ CitationMetadata _parseCitationMetadata(Object? jsonObject) {
   return switch (jsonObject) {
     {'citationSources': final List<Object?> citationSources} =>
       CitationMetadata(citationSources.map(_parseCitationSource).toList()),
-    _ => throw FormatException('Unhandled CitationMetadata format', jsonObject),
+    // Vertex SDK format uses `citations`
+    {'citations': final List<Object?> citationSources} =>
+      CitationMetadata(citationSources.map(_parseCitationSource).toList()),
+    _ => throw unhandledFormat('CitationMetadata', jsonObject),
   };
 }
 
 CitationSource _parseCitationSource(Object? jsonObject) {
   if (jsonObject is! Map) {
-    throw FormatException('Unhandled CitationSource format', jsonObject);
+    throw unhandledFormat('CitationSource', jsonObject);
   }
 
   final uriString = jsonObject['uri'] as String?;

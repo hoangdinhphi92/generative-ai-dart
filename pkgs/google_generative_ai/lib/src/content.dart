@@ -15,6 +15,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'error.dart';
+
 /// The base structured datatype containing multi-part content of a message.
 final class Content {
   /// The producer of the content.
@@ -57,7 +59,7 @@ Content parseContent(Object jsonObject) {
           _ => null,
         },
         parts.map(_parsePart).toList()),
-    _ => throw FormatException('Unhandled Content format', jsonObject),
+    _ => throw unhandledFormat('Content', jsonObject),
   };
 }
 
@@ -77,7 +79,21 @@ Part _parsePart(Object? jsonObject) {
       throw UnimplementedError('FunctionResponse part not yet supported'),
     {'inlineData': {'mimeType': String _, 'data': String _}} =>
       throw UnimplementedError('inlineData content part not yet supported'),
-    _ => throw FormatException('Unhandled Part format', jsonObject),
+    {
+      'executableCode': {
+        'language': final String language,
+        'code': final String code,
+      }
+    } =>
+      ExecutableCode(Language._parse(language), code),
+    {
+      'codeExecutionResult': {
+        'outcome': final String outcome,
+        'output': final String output,
+      }
+    } =>
+      CodeExecutionResult(Outcome._parse(outcome), output),
+    _ => throw unhandledFormat('Part', jsonObject),
   };
 }
 
@@ -150,5 +166,83 @@ final class FunctionResponse implements Part {
   @override
   Object toJson() => {
         'functionResponse': {'name': name, 'response': response}
+      };
+}
+
+/// The code that was executed by the model to generate a response.
+///
+/// When code execution is enabled, the model may generate code and run it
+/// during the course of generating the text response. When it does, the code
+/// is included as an `ExecutableCode` in the content.
+final class ExecutableCode implements Part {
+  final Language language;
+  final String code;
+
+  ExecutableCode(this.language, this.code);
+  @override
+  Object toJson() => {
+        'executable_code': {
+          'langage': language.toJson(),
+          'code': code,
+        }
+      };
+}
+
+/// The output from running an [ExecutableCode] to generate a response.
+///
+/// When code execution is enabled, the model may generate code and run it
+/// during the course of generating the text response. When it does, the output
+/// from the code is included as a `CodeExecutionResult` in the content.
+final class CodeExecutionResult implements Part {
+  final Outcome outcome;
+  final String output;
+  CodeExecutionResult(this.outcome, this.output);
+
+  @override
+  Object toJson() => {
+        'code_execution_result': {
+          'outcome': outcome.toJson(),
+          'output': output,
+        }
+      };
+}
+
+/// A programming language used in an [ExecutableCode].
+enum Language {
+  unspecified,
+  python;
+
+  static Language _parse(Object jsonObject) => switch (jsonObject) {
+        'LANGUAGE_UNSPECIFIED' => unspecified,
+        'PYTHON' => python,
+        _ => throw unhandledFormat('Language', jsonObject),
+      };
+
+  String toJson() => switch (this) {
+        unspecified => 'LANGUAGE_UNSPECIFIED',
+        python => 'PYTHON',
+      };
+}
+
+/// The type of result from running an [ExecutableCode].
+enum Outcome {
+  unspecified,
+  ok,
+  failed,
+  deadlineExceeded;
+
+  static Outcome _parse(Object jsonObject) => switch (jsonObject) {
+        'OUTCOME_UNSPECIFIED' => unspecified,
+        'OUTCOME_OK' => ok,
+        'OUTCOME_FAILED' => failed,
+        'OUTCOME_DEADLINE_EXCEEDED' => deadlineExceeded,
+        _ => throw unhandledFormat('Language', jsonObject),
+      };
+
+  String toJson() => switch (this) {
+        unspecified => 'OUTCOME_UNSPECIFIED',
+        ok => 'OUTCOME_OK',
+        failed => 'OUTCOME_FAILED',
+        deadlineExceeded => 'OUTCOME_DEADLINE_EXCEEDED',
       };
 }
