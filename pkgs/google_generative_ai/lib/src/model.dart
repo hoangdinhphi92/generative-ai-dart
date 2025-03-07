@@ -377,7 +377,7 @@ GenerativeModel createModelWithClient({
 // this API need to be coordinated with the vertex AI SDK.
 GenerativeModel createModelWithBaseUri({
   required String model,
-  required String apiKey,
+  String? apiKey,
   required Uri baseUri,
   FutureOr<Map<String, String>> Function()? requestHeaders,
   List<SafetySetting> safetySettings = const [],

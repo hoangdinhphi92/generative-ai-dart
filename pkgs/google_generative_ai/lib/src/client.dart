@@ -24,6 +24,7 @@ const clientName = 'genai-dart/$packageVersion';
 
 abstract interface class ApiClient {
   Future<Map<String, Object?>> makeRequest(Uri uri, Map<String, Object?> body);
+
   Stream<Map<String, Object?>> streamRequest(
       Uri uri, Map<String, Object?> body);
 }
@@ -33,13 +34,13 @@ abstract interface class ApiClient {
 final _utf8Json = json.fuse(utf8);
 
 final class HttpApiClient implements ApiClient {
-  final String _apiKey;
+  final String? _apiKey;
   final http.Client? _httpClient;
 
   final FutureOr<Map<String, String>> Function()? _requestHeaders;
 
   HttpApiClient(
-      {required String apiKey,
+      {String? apiKey,
       http.Client? httpClient,
       FutureOr<Map<String, String>> Function()? requestHeaders})
       : _apiKey = apiKey,
@@ -47,8 +48,8 @@ final class HttpApiClient implements ApiClient {
         _requestHeaders = requestHeaders;
 
   Future<Map<String, String>> _headers() async => {
-        'x-goog-api-key': _apiKey,
-        'x-goog-api-client': clientName,
+        if (_apiKey != null) 'x-goog-api-key': _apiKey!,
+        if (_apiKey != null) 'x-goog-api-client': clientName,
         'Content-Type': 'application/json',
         if (_requestHeaders case final requestHeaders?)
           ...(await requestHeaders()),
