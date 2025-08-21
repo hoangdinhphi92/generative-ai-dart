@@ -97,10 +97,22 @@ GenerativeAIException parseError(Object jsonObject) {
     } =>
       InvalidApiKey(message),
     {
+      'status': 'API_KEY_INVALID',
+    } =>
+      InvalidApiKey(
+        "The API key is invalid or missing. Please check your API key and try again.",
+      ),
+    {
       'message': final String message,
       'status': 'RESOURCE_EXHAUSTED',
     } =>
       QuotaLimitedException(message),
+    {
+      'status': 'RESOURCE_EXHAUSTED',
+    } =>
+      QuotaLimitedException(
+        "You exceeded your current quota, please check your plan and billing details",
+      ),
     {'message': UnsupportedUserLocation._message} => UnsupportedUserLocation(),
     {'message': final String message} => ServerException(message),
     _ => throw unhandledFormat('server error', jsonObject)
