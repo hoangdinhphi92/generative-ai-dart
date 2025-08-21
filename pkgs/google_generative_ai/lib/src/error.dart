@@ -35,9 +35,21 @@ final class InvalidApiKey implements GenerativeAIException {
   String toString() => message;
 }
 
+/// Exception thrown when the server rejects the API key.
+final class QuotaLimitedException implements GenerativeAIException {
+  @override
+  final String message;
+
+  QuotaLimitedException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 /// Exception thrown when the user location is unsupported.
 final class UnsupportedUserLocation implements GenerativeAIException {
   static const _message = 'User location is not supported for the API use.';
+
   @override
   String get message => _message;
 }
@@ -79,6 +91,16 @@ GenerativeAIException parseError(Object jsonObject) {
       'details': [{'reason': 'API_KEY_INVALID'}, ...]
     } =>
       InvalidApiKey(message),
+    {
+      'message': final String message,
+      'reason': 'API_KEY_INVALID',
+    } =>
+      InvalidApiKey(message),
+    {
+      'message': final String message,
+      'reason': 'RESOURCE_EXHAUSTED',
+    } =>
+      QuotaLimitedException(message),
     {'message': UnsupportedUserLocation._message} => UnsupportedUserLocation(),
     {'message': final String message} => ServerException(message),
     _ => throw unhandledFormat('server error', jsonObject)
