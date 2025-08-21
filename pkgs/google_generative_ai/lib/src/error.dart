@@ -93,12 +93,12 @@ GenerativeAIException parseError(Object jsonObject) {
       InvalidApiKey(message),
     {
       'message': final String message,
-      'reason': 'API_KEY_INVALID',
+      'status': 'API_KEY_INVALID',
     } =>
       InvalidApiKey(message),
     {
       'message': final String message,
-      'reason': 'RESOURCE_EXHAUSTED',
+      'status': 'RESOURCE_EXHAUSTED',
     } =>
       QuotaLimitedException(message),
     {'message': UnsupportedUserLocation._message} => UnsupportedUserLocation(),
