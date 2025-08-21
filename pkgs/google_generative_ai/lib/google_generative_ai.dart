@@ -81,6 +81,7 @@ export 'src/error.dart'
         GenerativeAIException,
         GenerativeAISdkException,
         InvalidApiKey,
+        QuotaLimitedException,
         ServerException,
         UnsupportedUserLocation;
 export 'src/function_calling.dart'
