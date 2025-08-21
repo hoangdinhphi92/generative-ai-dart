@@ -1,3 +1,9 @@
+## 0.4.7
+
+- Update the README.md to indicate that this package is deprecated; using the
+  [Firebase SDK](https://firebase.google.com/docs/vertex-ai) is the preferred
+  path forward.
+
 ## 0.4.6
 
 - Throw a more relevant exception for server error HTTP responses.
